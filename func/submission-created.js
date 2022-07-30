@@ -1,10 +1,10 @@
-const fetch = require("node-fetch");
+import fetch from 'node-fetch';
 
-const { API_ENDPOINT, MAX_EMBED_FIELD_CHARS, MAX_EMBED_FOOTER_CHARS } = require("./helpers/discord-helpers.js");
-const { createJwt, decodeJwt } = require("./helpers/jwt-helpers.js");
-const { getBan, isBlocked } = require("./helpers/user-helpers.js");
+import { API_ENDPOINT, MAX_EMBED_FIELD_CHARS, MAX_EMBED_FOOTER_CHARS } from "./helpers/discord-helpers.js";
+import { createJwt, decodeJwt } from "./helpers/jwt-helpers.js";
+import { getBan, isBlocked } from "./helpers/user-helpers.js";
 
-exports.handler = async function (event, context) {
+export async function handler(event, context) {
     let payload;
 
     if (process.env.USE_NETLIFY_FORMS) {
@@ -19,17 +19,15 @@ exports.handler = async function (event, context) {
         const params = new URLSearchParams(event.body);
         payload = {
             banReason: params.get("banReason") || undefined,
-            banMistake: params.get("banMistake") || undefined,
-            staffMessage: params.get("staffMessage") || undefined,
-            agreementTroll: params.get("agreementTroll") || undefined,
+            appealText: params.get("appealText") || undefined,
+            futureActions: params.get("futureActions") || undefined,
             token: params.get("token") || undefined
         };
     }
 
     if (payload.banReason !== undefined &&
-        payload.banMistake !== undefined &&
-        payload.staffMessage !== undefined && 
-        payload.agreementTroll !== undefined &&
+        payload.appealText !== undefined &&
+        payload.futureActions !== undefined && 
         payload.token !== undefined) {
         
         const userInfo = decodeJwt(payload.token);
@@ -43,9 +41,8 @@ exports.handler = async function (event, context) {
         }
         
         const message = {
-            content: `<@${userInfo.id}>`,
             embed: {
-                title: "New ban appeal submitted!",
+                title: "New appeal submitted!",
                 timestamp: new Date().toISOString(),
                 fields: [
                     {
@@ -57,16 +54,12 @@ exports.handler = async function (event, context) {
                         value: payload.banReason.slice(0, MAX_EMBED_FIELD_CHARS)
                     },
                     {
-                        name: "Do you feel your ban was a mistake? [Yes/No/Other]",
-                        value: payload.banMistake.slice(0, MAX_EMBED_FIELD_CHARS)
+                        name: "Why do you feel you should be unbanned?",
+                        value: payload.appealText.slice(0, MAX_EMBED_FIELD_CHARS)
                     },
                     {
-                        name: "Is there anything you would like to say to Staff regarding your unban appeal and ban?",
-                        value: payload.staffMessage.slice(0, MAX_EMBED_FIELD_CHARS)
-                    },
-                    {
-                        name: "I acknowledge the information entered here is correct, and I consent to my unban status being moved to declined if I am found to be lying or fabricating evidence.",
-                        value: payload.agreementTroll.slice(0, MAX_EMBED_FIELD_CHARS)
+                        name: "What will you do to avoid being banned in the future?",
+                        value: payload.futureActions.slice(0, MAX_EMBED_FIELD_CHARS)
                     }
                 ]
             }
@@ -94,14 +87,9 @@ exports.handler = async function (event, context) {
                     type: 1,
                     components: [{
                         type: 2,
-                        style: 2,
+                        style: 5,
                         label: "Approve appeal and unban user",
-                        custom_id: "accept_stage_intial"
-                    }, {
-                        type: 2,
-                        style: 4,
-                        label: "Decline appeal",
-                        custom_id: "decline_stage_intial"
+                        url: `${unbanUrl.toString()}?token=${encodeURIComponent(createJwt(unbanInfo))}`
                     }]
                 }];
             }
